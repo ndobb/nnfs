@@ -68,48 +68,67 @@ class Loss_CategoricalCrossEntropy:
         self.dvalues[range(samples), y_true] -= 1
         self.dvalues = self.dvalues / samples
 
+
+class Optimizer_SGD:
+    def __init__(self, learning_rate=1.0):
+        self.learning_rate = learning_rate
+    def update_params(self, layer):
+        layer.weights += -self.learning_rate * layer.dweights
+        layer.biases += -self.learning_rate * layer.dbiases
+
 # Create dataset
 X, y  = spiral_data(100, 3)
 
 # Create Dense layer with 2 input features and 3 output values
-dense1 = Layer_Dense(2, 3)
+dense1 = Layer_Dense(2, 64)
 activation1 = Activation_ReLU()
 
 # Create 2nd Dense layer with 3 input features
-dense2 = Layer_Dense(3, 3)
+dense2 = Layer_Dense(64, 3)
 activation2 = Activation_Softmax()
 
 # Create loss function
 loss_function = Loss_CategoricalCrossEntropy()
 
-# Make a forward pass of training data 
-dense1.forward(X)
-activation1.forward(dense1.output)
+# Create Optimizer
+optimizer = Optimizer_SGD()
 
-# Make a forward pass through 2nd Dense layer
-dense2.forward(activation1.output)
-activation2.forward(dense2.output)
+# Train in loop
+for epoch in range(10001):
 
-print(activation2.output[:5])
+    # Make a forward pass of training data 
+    dense1.forward(X)
+    activation1.forward(dense1.output)
 
-# Calculate loss from output of activation2
-loss = loss_function.forward(activation2.output, y)
-print('loss:', loss)
+    # Make a forward pass through 2nd Dense layer
+    dense2.forward(activation1.output)
+    activation2.forward(dense2.output)
 
-# Calculate accuracy from output of activation2 and targets
-predictions = np.argmax(activation2.output, axis=1)
-accuracy = np.mean(predictions==y)
-print('acc:', accuracy)
+    # Calculate loss from output of activation2
+    loss = loss_function.forward(activation2.output, y)
 
-# Backward pass
-loss_function.backward(activation2.output, y)
-activation2.backward(loss_function.dvalues)
-dense2.backward(activation2.dvalues)
-activation1.backward(dense2.dvalues)
-dense1.backward(activation1.dvalues)
+    # Calculate accuracy from output of activation2 and targets
+    predictions = np.argmax(activation2.output, axis=1)
+    accuracy = np.mean(predictions==y)
 
-# Print gradients
-print(dense1.dweights)
-print(dense1.dbiases)
-print(dense2.dweights)
-print(dense2.dbiases)
+    if not epoch % 100:
+        print(f'epoch: {epoch}, ' +
+              f'acc: {accuracy:3f}, ' +
+              f'loss: {loss:.3f}')
+
+    # Backward pass
+    loss_function.backward(activation2.output, y)
+    activation2.backward(loss_function.dvalues)
+    dense2.backward(activation2.dvalues)
+    activation1.backward(dense2.dvalues)
+    dense1.backward(activation1.dvalues)
+
+    # Print gradients
+    #print(dense1.dweights)
+    #print(dense1.dbiases)
+    #print(dense2.dweights)
+    #print(dense2.dbiases)
+
+    # Update weights and biases
+    optimizer.update_params(dense1)
+    optimizer.update_params(dense2)
