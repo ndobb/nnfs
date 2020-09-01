@@ -4,7 +4,7 @@ from nnfs.datasets import spiral_data
 
 nnfs.init()
 
-# Chapter 14
+# Chapter 15
 
 # Dense Layer
 class Layer_Dense:
@@ -401,18 +401,19 @@ class Activation_Softmax_Loss_CategoricalCrossentropy():
 X, y  = spiral_data(100, 3)
 
 # Create Dense layer with 2 input features and 3 output values
-dense1 = Layer_Dense(2, 512, weight_regularizer_l1=5e-4, 
+dense1 = Layer_Dense(2, 64, weight_regularizer_l2=5e-4, 
                             bias_regularizer_l2=5e-4)
 activation1 = Activation_ReLU()
+dropout1 = Layer_Dropout(0.1)
 
 # Create 2nd Dense layer with 3 input features
-dense2 = Layer_Dense(512, 3)
+dense2 = Layer_Dense(64, 3)
 
 # Create Softmax classifier's combined loss and activation
 loss_activation = Activation_Softmax_Loss_CategoricalCrossentropy()
 
 # Create Optimizer
-optimizer = Optimizer_Adam(learning_rate=0.02, decay=5e-7)
+optimizer = Optimizer_Adam(learning_rate=0.05, decay=5e-5)
 
 # Train in loop
 for epoch in range(10001):
@@ -420,9 +421,10 @@ for epoch in range(10001):
     # Make a forward pass of training data 
     dense1.forward(X)
     activation1.forward(dense1.output)
+    dropout1.forward(activation1.output)
 
     # Make a forward pass through 2nd Dense layer
-    dense2.forward(activation1.output)
+    dense2.forward(dropout1.output)
 
     # Calculate loss from output of activation2
     data_loss = loss_activation.forward(dense2.output, y)
@@ -449,7 +451,8 @@ for epoch in range(10001):
     # Backward pass
     loss_activation.backward(loss_activation.output, y)
     dense2.backward(loss_activation.dinputs)
-    activation1.backward(dense2.dinputs)
+    dropout1.backward(dense2.dinputs)
+    activation1.backward(dropout1.dinputs)
     dense1.backward(activation1.dinputs)
 
     # Update weights and biases
